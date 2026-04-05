@@ -40,7 +40,7 @@ jobs:
 
       - name: Build release binary
         working-directory: ./rust
-        run: cargo build --release --package rusty-claude-cli --target ${{ matrix.target }}
+        run: cargo build --release --package claw --target ${{ matrix.target }}
 
       - name: Strip binary
         if: matrix.target == 'x86_64-unknown-linux-gnu'
