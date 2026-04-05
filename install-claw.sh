@@ -327,6 +327,7 @@ setup_environment() {
 if ! curl -s http://127.0.0.1:8080/health &> /dev/null; then
     echo "⚠️  CLIProxyAPI not running. Start it with: $PROXY_DIR/start-proxy.sh"
     echo "   Or install the systemd service for auto-start"
+    echo ""
 fi
 
 # Set proxy URL for Anthropic API
@@ -343,9 +344,9 @@ main() {
     print_banner
     
     echo -e "${BLUE}This will install:${NC}"
-    echo -e "   1. 🦀 Claw Code (static binary)"
+    echo -e "   1. 🦀 Claw Code (static binary from GitHub releases)"
     echo -e "   2. 🥟 Bun (JavaScript runtime) - if no JS runtime found"
-    echo -e "   3. 🌐 CLIProxyAPI (API proxy for existing subscriptions)"
+    echo -e "   3. 🌐 CLIProxyAPI (pre-built binary from GitHub releases)"
     echo ""
     
     read -p "Continue? (Y/n): " -n 1 -r
