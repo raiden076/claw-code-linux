@@ -4,8 +4,6 @@ on:
   push:
     branches: [main, master]
     tags: ['v*']
-  pull_request:
-    branches: [main, master]
   workflow_dispatch:
 
 env:
@@ -16,9 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target:
-          - x86_64-unknown-linux-musl
-          - aarch64-unknown-linux-musl
+        include:
+          - target: x86_64-unknown-linux-gnu
+            cross: false
+          - target: aarch64-unknown-linux-gnu
+            cross: true
 
     steps:
       - name: Checkout repository
@@ -29,61 +29,33 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install musl tools
+      - name: Install cross-compilation tools
+        if: matrix.cross
         run: |
           sudo apt-get update
-          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-musl" ]; then
-            sudo apt-get install -y musl-tools gcc-aarch64-linux-gnu
-            # Install aarch64 musl target linker
-            sudo apt-get install -y libc6-dev-arm64-cross
-          else
-            sudo apt-get install -y musl-tools
-          fi
+          sudo apt-get install -y gcc-aarch64-linux-gnu
 
-      - name: Configure cargo for cross-compilation
+      - name: Configure cargo
+        working-directory: ./rust
         run: |
           mkdir -p .cargo
-          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-musl" ]; then
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
             cat > .cargo/config.toml << 'EOF'
-            [target.aarch64-unknown-linux-musl]
+            [target.aarch64-unknown-linux-gnu]
             linker = "aarch64-linux-gnu-gcc"
-            rustflags = ["-C", "target-feature=+crt-static", "-C", "link-self-contained=yes"]
-            EOF
-          else
-            cat > .cargo/config.toml << 'EOF'
-            [target.x86_64-unknown-linux-musl]
-            rustflags = ["-C", "target-feature=+crt-static", "-C", "link-self-contained=yes"]
             EOF
           fi
-        working-directory: ./rust
 
-      - name: Build static release binary
+      - name: Build release binary
         working-directory: ./rust
         run: cargo build --release --package rusty-claude-cli --target ${{ matrix.target }}
-        env:
-          RUSTFLAGS: "-C target-feature=+crt-static"
 
       - name: Strip binary
-        run: |
-          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-musl" ]; then
-            strip rust/target/${{ matrix.target }}/release/claw
-          else
-            aarch64-linux-gnu-strip rust/target/${{ matrix.target }}/release/claw || true
-          fi
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        working-directory: ./rust
+        run: strip target/${{ matrix.target }}/release/claw
 
-      - name: Verify static linking
-        run: |
-          echo "Checking binary linking..."
-          if ldd rust/target/${{ matrix.target }}/release/claw 2>&1 | grep -q "not a dynamic executable"; then
-            echo "✅ Binary is fully static!"
-          elif ldd rust/target/${{ matrix.target }}/release/claw 2>&1 | grep -q "statically linked"; then
-            echo "✅ Binary is fully static!"
-          else
-            echo "⚠️  Warning: Binary may have dynamic dependencies:"
-            ldd rust/target/${{ matrix.target }}/release/claw || true
-          fi
-
-      - name: Create archive
+      - name: Package binary
         run: |
           mkdir -p dist
           cp rust/target/${{ matrix.target }}/release/claw dist/claw-${{ matrix.target }}
@@ -100,20 +72,16 @@ jobs:
     needs: build-linux
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
 
     steps:
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: claw-*
+          merge-multiple: true
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: artifacts/*.tar.gz
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
