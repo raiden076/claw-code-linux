@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claw Code - Linux Binary</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .install-box {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: left;
+        }
+        .install-box code {
+            font-family: 'Monaco', 'Menlo', monospace;
+            color: #00ff88;
+            font-size: 0.95rem;
+        }
+        .install-box .comment {
+            color: #666;
+        }
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #768bf0;
+        }
+        .btn-secondary {
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #444;
+        }
+        .btn-secondary:hover {
+            background: #2a2a2a;
+        }
+        .archs {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #222;
+        }
+        .archs h3 {
+            color: #888;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+        .arch-grid {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .arch-item {
+            background: #1a1a1a;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .arch-item strong {
+            color: #fff;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        .arch-item span {
+            color: #666;
+            font-size: 0.85rem;
+        }
+        footer {
+            margin-top: 3rem;
+            color: #555;
+            font-size: 0.85rem;
+        }
+        footer a {
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐾 Claw Code</h1>
+        <p class="subtitle">Claude Code CLI for Linux — Pre-built Binary</p>
+
+        <div class="install-box">
+            <code>
+                <span class="comment"># Install with one command</span><br>
+                curl -fsSL <span id="domain">YOUR_DOMAIN</span>/install.sh | bash
+            </code>
+        </div>
+
+        <div class="buttons">
+            <a href="/install.sh" class="btn btn-primary">📥 Install Script</a>
+            <a href="https://github.com/raiden076/claw-code-linux" class="btn btn-secondary">🐙 GitHub</a>
+        </div>
+
+        <div class="archs">
+            <h3>Available Architectures</h3>
+            <div class="arch-grid">
+                <div class="arch-item">
+                    <strong>x86_64</strong>
+                    <span>Intel/AMD 64-bit</span>
+                </div>
+                <div class="arch-item">
+                    <strong>ARM64</strong>
+                    <span>ARM 64-bit</span>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Binary hosted on GitHub Releases • <a href="https://github.com/raiden076/claw-code-linux/releases">View All Releases</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Auto-detect domain
+        document.getElementById('domain').textContent = window.location.origin;
+    </script>
+</body>
+</html>
