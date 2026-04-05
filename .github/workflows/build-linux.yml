@@ -49,6 +49,7 @@ jobs:
         with:
           name: claw-${{ matrix.target }}
           path: claw-${{ matrix.target }}.tar.gz
+          if-no-files-found: error
 
   create-release:
     needs: build-linux
@@ -58,11 +59,20 @@ jobs:
       contents: write
 
     steps:
-      - name: Download artifacts
+      - name: Download x86_64 artifact
         uses: actions/download-artifact@v4
         with:
+          name: claw-x86_64-unknown-linux-gnu
           path: artifacts
-          merge-multiple: true
+
+      - name: Download aarch64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: claw-aarch64-unknown-linux-gnu
+          path: artifacts
+
+      - name: List artifacts
+        run: ls -la artifacts/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
