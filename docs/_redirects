@@ -1,0 +1,6 @@
+# No SPA fallback for shell scripts
+/claw-install.sh /claw-install.sh 200
+/install.sh /install.sh 200
+
+# SPA fallback for everything else
+/* /index.html 200
