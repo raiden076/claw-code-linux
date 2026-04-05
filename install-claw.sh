@@ -340,7 +340,133 @@ EOF
     echo -e "${GREEN}✅ Environment configured${NC}"
 }
 
+update_claw() {
+    echo -e "${BLUE}🔄 Updating Claw Code and CLIProxyAPI...${NC}"
+    echo ""
+    
+    # Backup current binaries
+    if [ -f "$INSTALL_DIR/claw" ]; then
+        cp "$INSTALL_DIR/claw" "$INSTALL_DIR/claw.backup"
+        echo -e "${YELLOW}Backed up current claw binary${NC}"
+    fi
+    
+    if [ -f "$PROXY_DIR/cliproxyapi" ]; then
+        cp "$PROXY_DIR/cliproxyapi" "$PROXY_DIR/cliproxyapi.backup"
+        echo -e "${YELLOW}Backed up current CLIProxyAPI binary${NC}"
+    fi
+    echo ""
+    
+    # Re-install Claw (will get latest release)
+    echo -e "${BLUE}Downloading latest Claw binary...${NC}"
+    install_claw
+    
+    # Check if proxy is installed and update it
+    if [ -f "$PROXY_DIR/cliproxyapi" ]; then
+        echo ""
+        echo -e "${BLUE}Updating CLIProxyAPI...${NC}"
+        
+        # Get latest proxy version
+        ARCH=$(uname -m)
+        case "$ARCH" in
+            x86_64)
+                PROXY_ARCH="amd64"
+                ;;
+            aarch64|arm64)
+                PROXY_ARCH="arm64"
+                ;;
+        esac
+        
+        PROXY_REPO="router-for-me/CLIProxyAPI"
+        LATEST_URL="https://api.github.com/repos/$PROXY_REPO/releases/latest"
+        
+        if command -v curl &> /dev/null; then
+            DOWNLOAD_URL=$(curl -s "$LATEST_URL" | grep -o "browser_download_url.*linux_${PROXY_ARCH}.tar.gz" | cut -d'"' -f4)
+        else
+            DOWNLOAD_URL=$(wget -qO- "$LATEST_URL" | grep -o "browser_download_url.*linux_${PROXY_ARCH}.tar.gz" | cut -d'"' -f4)
+        fi
+        
+        if [ -n "$DOWNLOAD_URL" ]; then
+            TMP_DIR=$(mktemp -d)
+            curl -sSL "$DOWNLOAD_URL" -o "$TMP_DIR/cliproxyapi.tar.gz"
+            tar -xzf "$TMP_DIR/cliproxyapi.tar.gz" -C "$TMP_DIR"
+            PROXY_BIN=$(find "$TMP_DIR" -type f -executable 2>/dev/null | head -1)
+            if [ -z "$PROXY_BIN" ]; then
+                PROXY_BIN=$(find "$TMP_DIR" -type f -name "CLIProxyAPI" -o -name "cliproxyapi" 2>/dev/null | head -1)
+            fi
+            if [ -n "$PROXY_BIN" ]; then
+                cp "$PROXY_BIN" "$PROXY_DIR/cliproxyapi"
+                chmod +x "$PROXY_DIR/cliproxyapi"
+                echo -e "${GREEN}✅ CLIProxyAPI updated!${NC}"
+            fi
+            rm -rf "$TMP_DIR"
+        fi
+        
+        # Get new version info
+        NEW_VERSION=$(curl -s "$LATEST_URL" | grep -o '"tag_name": "[^"]*"' | head -1 | cut -d'"' -f4)
+        echo -e "${BLUE}CLIProxyAPI version: $NEW_VERSION${NC}"
+    fi
+    
+    # Clean up backups if successful
+    if [ -f "$INSTALL_DIR/claw" ] && "$INSTALL_DIR/claw" --version &> /dev/null; then
+        rm -f "$INSTALL_DIR/claw.backup"
+        rm -f "$PROXY_DIR/cliproxyapi.backup" 2>/dev/null
+        echo ""
+        echo -e "${GREEN}══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${GREEN}  ✅ Update Complete!${NC}"
+        echo -e "${GREEN}══════════════════════════════════════════════════════════════${NC}"
+    else
+        echo ""
+        echo -e "${RED}❌ Update failed - restoring backups${NC}"
+        [ -f "$INSTALL_DIR/claw.backup" ] && mv "$INSTALL_DIR/claw.backup" "$INSTALL_DIR/claw"
+        [ -f "$PROXY_DIR/cliproxyapi.backup" ] && mv "$PROXY_DIR/cliproxyapi.backup" "$PROXY_DIR/cliproxyapi"
+        exit 1
+    fi
+}
+
+show_help() {
+    echo -e "${BLUE}Claw Code Linux Installer${NC}"
+    echo ""
+    echo "Usage:"
+    echo "  install-claw.sh          Install Claw Code and CLIProxyAPI"
+    echo "  install-claw.sh update   Update to latest versions"
+    echo "  install-claw.sh help     Show this help"
+    echo ""
+    echo "Environment variables:"
+    echo "  INSTALL_DIR              Where to install binaries (default: ~/.local/bin)"
+    echo "  PROXY_DIR                Where to install proxy (default: ~/.claw-proxy)"
+    echo ""
+    echo "Examples:"
+    echo "  # Standard install"
+    echo "  curl -sSL .../install-claw.sh | bash"
+    echo ""
+    echo "  # Update existing installation"
+    echo "  curl -sSL .../install-claw.sh | bash -s -- update"
+    echo ""
+    echo "  # Custom install location"
+    echo "  INSTALL_DIR=/usr/local/bin bash install-claw.sh"
+}
+
 main() {
+    # Handle command-line arguments
+    case "${1:-}" in
+        update|upgrade)
+            update_claw
+            exit 0
+            ;;
+        help|--help|-h)
+            show_help
+            exit 0
+            ;;
+        "")
+            # Continue to install
+            ;;
+        *)
+            echo -e "${RED}Unknown command: $1${NC}"
+            show_help
+            exit 1
+            ;;
+    esac
+    
     print_banner
     
     echo -e "${BLUE}This will install:${NC}"
@@ -406,6 +532,9 @@ main() {
     echo -e "   ${YELLOW}claw-with-proxy${NC}       Use with CLIProxyAPI"
     echo -e "   ${YELLOW}$PROXY_DIR/start-proxy.sh${NC}  Start proxy server"
     echo ""
+    echo -e "${BLUE}Update:${NC}"
+    echo -e "   ${YELLOW}install-claw.sh update${NC}  Update to latest versions"
+    echo ""
     echo -e "${BLUE}Configure Proxy:${NC}"
     echo -e "   Edit: ${YELLOW}nano $PROXY_DIR/config.yaml${NC}"
     echo -e "   Docs: ${YELLOW}https://help.router-for.me/${NC}"
@@ -416,4 +545,4 @@ main() {
     fi
 }
 
-main "$@"
+main "${@}"
