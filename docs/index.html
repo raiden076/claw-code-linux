@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Claw - Claude Code CLI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.6;
+            background: #0d1117;
+            color: #c9d1d9;
+        }
+        h1 { color: #58a6ff; }
+        .code {
+            background: #161b22;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-family: "SF Mono", Monaco, monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            border: 1px solid #30363d;
+            margin: 20px 0;
+        }
+        .code-block {
+            color: #7ee787;
+        }
+        a { color: #58a6ff; }
+        .install-box {
+            background: #238636;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        .install-box .code {
+            background: rgba(0,0,0,0.3);
+            border-color: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🦀 Claw</h1>
+    <p>Claude Code CLI - AI-powered coding assistant for your terminal</p>
+
+    <div class="install-box">
+        <h2>Quick Install</h2>
+        <div class="code">curl -sSL https://claw.arkaprav0.in/install | bash</div>
+    </div>
+
+    <h2>Manual Install</h2>
+    <p>Download the latest release for your architecture:</p>
+
+    <div class="code">
+        <div class="code-block"># x86_64 (AMD64)</div>
+        wget https://github.com/raiden076/claw-code-linux/releases/latest/download/claw-x86_64-unknown-linux-gnu.tar.gz<br><br>
+        <div class="code-block"># aarch64 (ARM64)</div>
+        wget https://github.com/raiden076/claw-code-linux/releases/latest/download/claw-aarch64-unknown-linux-gnu.tar.gz
+    </div>
+
+    <h2>Usage</h2>
+    <div class="code">
+        <div class="code-block"># Interactive REPL</div>
+        claw<br><br>
+        <div class="code-block"># Single prompt</div>
+        claw "explain this codebase"<br><br>
+        <div class="code-block"># With specific model</div>
+        claw --model claude-opus "refactor main.rs"
+    </div>
+
+    <h2>Links</h2>
+    <ul>
+        <li><a href="https://github.com/raiden076/claw-code-linux">GitHub Repository</a></li>
+        <li><a href="https://github.com/raiden076/claw-code-linux/releases">Releases</a></li>
+    </ul>
+
+    <p style="margin-top: 40px; color: #8b949e; font-size: 12px;">
+        Powered by <a href="https://github.com/raiden076/claw-code-linux">Claw</a>
+    </p>
+</body>
+</html>
