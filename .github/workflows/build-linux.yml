@@ -14,11 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            cross: false
-          - target: aarch64-unknown-linux-gnu
-            cross: true
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
 
     steps:
       - name: Checkout repository
@@ -30,21 +26,17 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install cross-compilation tools
-        if: matrix.cross
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
 
-      - name: Configure cargo
-        working-directory: ./rust
+      - name: Configure cargo for aarch64
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
-          mkdir -p .cargo
-          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
-            cat > .cargo/config.toml << 'EOF'
-            [target.aarch64-unknown-linux-gnu]
-            linker = "aarch64-linux-gnu-gcc"
-            EOF
-          fi
+          mkdir -p rust/.cargo
+          echo '[target.aarch64-unknown-linux-gnu]' > rust/.cargo/config.toml
+          echo 'linker = "aarch64-linux-gnu-gcc"' >> rust/.cargo/config.toml
 
       - name: Build release binary
         working-directory: ./rust
