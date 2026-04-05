@@ -74,67 +74,107 @@ setup_cliproxyapi() {
     mkdir -p "$PROXY_DIR"
     cd "$PROXY_DIR"
     
-    # Check if already cloned
-    if [ -d "$PROXY_DIR/CLIProxyAPI" ]; then
-        echo -e "${YELLOW}CLIProxyAPI already exists, updating...${NC}"
-        cd CLIProxyAPI && git pull
+    # Detect architecture for CLIProxyAPI
+    ARCH=$(uname -m)
+    case "$ARCH" in
+        x86_64)
+            PROXY_ARCH="amd64"
+            ;;
+        aarch64|arm64)
+            PROXY_ARCH="arm64"
+            ;;
+        *)
+            echo -e "${RED}❌ Unsupported architecture for CLIProxyAPI: $ARCH${NC}"
+            exit 1
+            ;;
+    esac
+    
+    echo -e "${BLUE}Architecture: $PROXY_ARCH${NC}"
+    
+    # Get latest CLIProxyAPI release
+    PROXY_REPO="router-for-me/CLIProxyAPI"
+    LATEST_URL="https://api.github.com/repos/$PROXY_REPO/releases/latest"
+    
+    echo -e "${BLUE}Fetching latest CLIProxyAPI release...${NC}"
+    
+    if command -v curl &> /dev/null; then
+        DOWNLOAD_URL=$(curl -s "$LATEST_URL" | grep -o "browser_download_url.*linux_${PROXY_ARCH}.tar.gz" | cut -d'"' -f4)
+    elif command -v wget &> /dev/null; then
+        DOWNLOAD_URL=$(wget -qO- "$LATEST_URL" | grep -o "browser_download_url.*linux_${PROXY_ARCH}.tar.gz" | cut -d'"' -f4)
     else
-        echo -e "${BLUE}Cloning CLIProxyAPI...${NC}"
-        git clone https://github.com/router-for-me/CLIProxyAPI.git
-        cd CLIProxyAPI
+        echo -e "${RED}❌ Error: curl or wget required${NC}"
+        exit 1
     fi
     
-    # Check if Go is installed
-    if ! command -v go &> /dev/null; then
-        echo -e "${YELLOW}⚠️  Go not found. CLIProxyAPI requires Go to build.${NC}"
-        echo -e "${BLUE}Installing Go...${NC}"
-        
-        # Install Go based on architecture
-        ARCH=$(uname -m)
-        case "$ARCH" in
-            x86_64)
-                GO_ARCH="amd64"
-                ;;
-            aarch64|arm64)
-                GO_ARCH="arm64"
-                ;;
-            *)
-                echo -e "${RED}Unsupported architecture for Go install: $ARCH${NC}"
-                exit 1
-                ;;
-        esac
-        
-        GO_VERSION="1.23.4"
-        curl -sSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz
-        sudo tar -C /usr/local -xzf /tmp/go.tar.gz
-        export PATH="/usr/local/go/bin:$PATH"
-        echo 'export PATH="/usr/local/go/bin:$PATH"' >> ~/.bashrc
+    if [ -z "$DOWNLOAD_URL" ]; then
+        echo -e "${RED}❌ Could not find CLIProxyAPI release for linux_${PROXY_ARCH}${NC}"
+        exit 1
     fi
     
-    echo -e "${BLUE}Building CLIProxyAPI...${NC}"
-    go build -o cliproxyapi main.go
+    echo -e "${BLUE}Downloading CLIProxyAPI from GitHub releases...${NC}"
+    
+    TMP_DIR=$(mktemp -d)
+    trap "rm -rf $TMP_DIR" EXIT
+    
+    if command -v curl &> /dev/null; then
+        curl -sSL "$DOWNLOAD_URL" -o "$TMP_DIR/cliproxyapi.tar.gz"
+    else
+        wget -q "$DOWNLOAD_URL" -O "$TMP_DIR/cliproxyapi.tar.gz"
+    fi
+    
+    # Extract
+    tar -xzf "$TMP_DIR/cliproxyapi.tar.gz" -C "$TMP_DIR"
+    
+    # Find the binary (could be named CLIProxyAPI or cliproxyapi)
+    PROXY_BIN=$(find "$TMP_DIR" -type f -executable -name "*" 2>/dev/null | head -1)
+    if [ -z "$PROXY_BIN" ]; then
+        # Try without executable check
+        PROXY_BIN=$(find "$TMP_DIR" -type f -name "CLIProxyAPI" -o -name "cliproxyapi" 2>/dev/null | head -1)
+    fi
+    
+    if [ -n "$PROXY_BIN" ]; then
+        cp "$PROXY_BIN" "$PROXY_DIR/cliproxyapi"
+        chmod +x "$PROXY_DIR/cliproxyapi"
+        echo -e "${GREEN}✅ CLIProxyAPI binary installed${NC}"
+    else
+        echo -e "${RED}❌ Could not find CLIProxyAPI binary in archive${NC}"
+        exit 1
+    fi
     
     # Create config
     if [ ! -f "$PROXY_DIR/config.yaml" ]; then
         cat > "$PROXY_DIR/config.yaml" << 'EOF'
 # CLIProxyAPI Configuration
 # This proxy allows you to use your existing AI subscriptions
+# Docs: https://help.router-for.me/
 
 server:
   port: 8080
   host: "127.0.0.1"
 
 # Providers - add your accounts here
-providers:
-  # Example: Gemini CLI
-  # gemini:
-  #   - name: "account1"
-  #     auth_type: "oauth"
-  
-  # Example: Claude Code  
-  # claude:
-  #   - name: "account1"
-  #     auth_type: "oauth"
+# Uncomment and configure the ones you want to use:
+
+# providers:
+#   # Gemini CLI - use your Gemini subscription
+#   gemini:
+#     - name: "personal"
+#       auth_type: "oauth"
+#   
+#   # Claude Code - use your Claude subscription
+#   claude:
+#     - name: "personal"  
+#       auth_type: "oauth"
+#   
+#   # OpenAI Codex - use your OpenAI subscription
+#   openai:
+#     - name: "personal"
+#       auth_type: "oauth"
+#   
+#   # Qwen Code - use your Qwen subscription
+#   qwen:
+#     - name: "personal"
+#       auth_type: "oauth"
 
 # Logging
 log_level: "info"
@@ -145,7 +185,7 @@ EOF
     # Create startup script
     cat > "$PROXY_DIR/start-proxy.sh" << EOF
 #!/bin/bash
-cd "$PROXY_DIR/CLIProxyAPI"
+cd "$PROXY_DIR"
 ./cliproxyapi --config "$PROXY_DIR/config.yaml"
 EOF
     chmod +x "$PROXY_DIR/start-proxy.sh"
@@ -159,8 +199,8 @@ After=network.target
 [Service]
 Type=simple
 User=$USER
-WorkingDirectory=$PROXY_DIR/CLIProxyAPI
-ExecStart=$PROXY_DIR/CLIProxyAPI/cliproxyapi --config $PROXY_DIR/config.yaml
+WorkingDirectory=$PROXY_DIR
+ExecStart=$PROXY_DIR/cliproxyapi --config $PROXY_DIR/config.yaml
 Restart=on-failure
 RestartSec=5
 
@@ -169,12 +209,16 @@ WantedBy=multi-user.target
 EOF
     
     echo -e "${GREEN}✅ CLIProxyAPI setup complete!${NC}"
+    echo ""
     echo -e "${YELLOW}📋 Next steps for proxy:${NC}"
     echo -e "   1. Edit config: ${BLUE}nano $PROXY_DIR/config.yaml${NC}"
-    echo -e "   2. Start proxy: ${BLUE}$PROXY_DIR/start-proxy.sh${NC}"
-    echo -e "   3. Or install systemd service:"
+    echo -e "   2. Authenticate with your providers (see: https://help.router-for.me/)"
+    echo -e "   3. Start proxy: ${BLUE}$PROXY_DIR/start-proxy.sh${NC}"
+    echo -e "   4. Or install systemd service:"
     echo -e "      ${BLUE}sudo cp $PROXY_DIR/claw-proxy.service /etc/systemd/system/${NC}"
     echo -e "      ${BLUE}sudo systemctl enable --now claw-proxy${NC}"
+    echo ""
+    echo -e "${BLUE}💡 Tip:${NC} Run ${YELLOW}cliproxyapi login${NC} to authenticate with providers"
 }
 
 install_claw() {
